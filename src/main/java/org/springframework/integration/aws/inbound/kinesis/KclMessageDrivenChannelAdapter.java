@@ -52,7 +52,7 @@ import com.amazonaws.services.kinesis.model.Record;
  * Kinesis stream(s) using AWS KCL.
  *
  * @author Hervé Fortin
- * 
+ *
  * @since 2.1.0
  */
 @ManagedResource
