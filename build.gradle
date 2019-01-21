@@ -20,6 +20,7 @@ description = 'Spring Integration AWS Support'
 apply from: "${rootProject.projectDir}/publish-maven.gradle"
 
 group = 'org.springframework.integration'
+version = '2.1.0.NAVBLUE-BUILD-SNAPSHOT'
 
 repositories {
 //	maven { url 'http://repo.spring.io/libs-staging-local' }
