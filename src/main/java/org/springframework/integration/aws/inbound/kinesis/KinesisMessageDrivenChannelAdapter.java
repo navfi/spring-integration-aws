@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 the original author or authors.
+ * Copyright 2017-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,6 +83,7 @@ import com.amazonaws.services.kinesis.model.StreamStatus;
  *
  * @author Artem Bilan
  * @author Krzysztof Witkowski
+ * @author Hervé Fortin
  *
  * @since 1.1
  */
@@ -1032,12 +1033,10 @@ public class KinesisMessageDrivenChannelAdapter extends MessageProducerSupport i
 			if (CheckpointMode.batch.equals(KinesisMessageDrivenChannelAdapter.this.checkpointMode)) {
 				this.checkpointer.checkpoint();
 			}
-			else if (CheckpointMode.periodic.equals(KinesisMessageDrivenChannelAdapter.this.checkpointMode)) {
-				// Checkpoint once every checkpoint interval.
-				if (System.currentTimeMillis() > nextCheckpointTimeInMillis) {
+			else if (CheckpointMode.periodic.equals(KinesisMessageDrivenChannelAdapter.this.checkpointMode) &&
+					System.currentTimeMillis() > nextCheckpointTimeInMillis) {
 					this.checkpointer.checkpoint();
 					this.nextCheckpointTimeInMillis = System.currentTimeMillis() + checkpointsInterval;
-				}
 			}
 		}
 

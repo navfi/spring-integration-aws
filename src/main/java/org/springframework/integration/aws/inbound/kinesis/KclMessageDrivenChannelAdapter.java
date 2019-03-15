@@ -299,16 +299,16 @@ public class KclMessageDrivenChannelAdapter extends MessageProducerSupport {
 			}
 
 			// checkpoint if needed
-			if (KclMessageDrivenChannelAdapter.this.checkpointMode == CheckpointMode.batch) {
+			if (CheckpointMode.batch.equals(KclMessageDrivenChannelAdapter.this.checkpointMode)) {
 				checkpoint(checkpointer);
 			}
-			else if (KclMessageDrivenChannelAdapter.this.checkpointMode == CheckpointMode.periodic) {
-				// Checkpoint once every checkpoint interval.
-				if (System.currentTimeMillis() > nextCheckpointTimeInMillis) {
-					checkpoint(checkpointer);
-					this.nextCheckpointTimeInMillis = System.currentTimeMillis() + checkpointsInterval;
-				}
+			else if (CheckpointMode.periodic.equals(KclMessageDrivenChannelAdapter.this.checkpointMode) &&
+					System.currentTimeMillis() > nextCheckpointTimeInMillis) {
+
+				checkpoint(checkpointer);
+				this.nextCheckpointTimeInMillis = System.currentTimeMillis() + checkpointsInterval;
 			}
+
 		}
 
 		/**
@@ -321,12 +321,13 @@ public class KclMessageDrivenChannelAdapter extends MessageProducerSupport {
 			performSend(prepareMessageForRecord(record, checkpointer), record);
 
 			// checkpoint if needed
-			if (KclMessageDrivenChannelAdapter.this.checkpointMode == CheckpointMode.record) {
+			if (CheckpointMode.record.equals(KclMessageDrivenChannelAdapter.this.checkpointMode)) {
 				checkpoint(checkpointer);
 			}
 		}
 
-		private AbstractIntegrationMessageBuilder<Object> prepareMessageForRecord(Record record, IRecordProcessorCheckpointer checkpointer) {
+		private AbstractIntegrationMessageBuilder<Object> prepareMessageForRecord(Record record,
+				IRecordProcessorCheckpointer checkpointer) {
 			Object payload = record.getData().array();
 			Message<?> messageToUse = null;
 
@@ -355,7 +356,7 @@ public class KclMessageDrivenChannelAdapter extends MessageProducerSupport {
 				messageBuilder.copyHeadersIfAbsent(messageToUse.getHeaders());
 			}
 
-			if (CheckpointMode.manual == KclMessageDrivenChannelAdapter.this.checkpointMode) {
+			if (CheckpointMode.manual.equals(KclMessageDrivenChannelAdapter.this.checkpointMode)) {
 				messageBuilder.setHeader(AwsHeaders.CHECKPOINTER, checkpointer);
 			}
 
