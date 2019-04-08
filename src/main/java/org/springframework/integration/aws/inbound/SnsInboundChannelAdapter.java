@@ -1,11 +1,11 @@
 /*
- * Copyright 2016-2017 the original author or authors.
+ * Copyright 2016-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -49,15 +49,16 @@ import com.fasterxml.jackson.databind.JsonNode;
  * The {@link HttpRequestHandlingMessagingGateway} extension for the Amazon WS SNS HTTP(S) endpoints.
  * Accepts all {@code x-amz-sns-message-type}s, converts the received Topic JSON message to the
  * {@link Map} using {@link MappingJackson2HttpMessageConverter} and send it to the provided
- * {@link #requestChannel} as {@link Message} {@code payload}.
+ * {@link #getRequestChannel()} as {@link Message} {@code payload}.
  * <p>
  * The mapped url must be configured inside the Amazon Web Service platform as a subscription.
  * Before receiving any notification itself this HTTP endpoint must confirm the subscription.
  * <p>
  * The {@link #handleNotificationStatus} flag (defaults to {@code false}) indicates that
  * this endpoint should send the {@code SubscriptionConfirmation/UnsubscribeConfirmation}
- * messages to the the provided {@link #requestChannel}. If that, the {@link AwsHeaders#NOTIFICATION_STATUS}
- * header is populated with the {@link NotificationStatus} value. In that case it is a responsibility of
+ * messages to the the provided {@link #getRequestChannel()}.
+ * If that, the {@link AwsHeaders#NOTIFICATION_STATUS} header is populated
+ * with the {@link NotificationStatus} value. In that case it is a responsibility of
  * the application to {@link NotificationStatus#confirmSubscription()} or not.
  * <p>
  * By default this endpoint just does {@link NotificationStatus#confirmSubscription()}
@@ -106,7 +107,7 @@ public class SnsInboundChannelAdapter extends HttpRequestHandlingMessagingGatewa
 	}
 
 	@Override
-	protected void onInit() throws Exception {
+	protected void onInit() {
 		super.onInit();
 		if (this.payloadExpression != null) {
 			this.evaluationContext = createEvaluationContext();

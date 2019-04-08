@@ -1,11 +1,11 @@
 /*
- * Copyright 2017-2018 the original author or authors.
+ * Copyright 2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,6 @@
 package org.springframework.integration.aws.outbound;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.springframework.core.convert.converter.Converter;
@@ -33,9 +32,9 @@ import org.springframework.integration.support.AbstractIntegrationMessageBuilder
 import org.springframework.integration.support.MutableMessage;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.converter.MessageConversionException;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-import org.springframework.util.concurrent.SettableListenableFuture;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.handlers.AsyncHandler;
@@ -55,8 +54,9 @@ import com.google.common.util.concurrent.MoreExecutors;
  * The {@link AbstractMessageHandler} implementation for the Amazon Kinesis Producer Library {@code putRecord(s)}.
  *
  * @author Arnaud Lecollaire
+ * @author Artem Bilan
  *
- * @since 2.1.0
+ * @since 2.2.0
  *
  * @see AmazonKinesisAsync#putRecord(PutRecordRequest)
  * @see AmazonKinesisAsync#putRecords(PutRecordsRequest)
@@ -160,7 +160,7 @@ public class KplMessageHandler extends AbstractAwsMessageHandler<Void> {
 	}
 
 	@Override
-	protected Future<?> handleMessageToAws(Message<?> message) throws Exception {
+	protected Future<?> handleMessageToAws(Message<?> message) {
 		if (message.getPayload() instanceof PutRecordsRequest) {
 			throw new UnsupportedOperationException("not implemented");
 		}
@@ -190,9 +190,13 @@ public class KplMessageHandler extends AbstractAwsMessageHandler<Void> {
 		final AsyncHandler<PutRecordRequest, UserRecordResult> asyncHandler =
 				obtainAsyncHandler(message, putRecordRequest);
 		final FutureCallback<UserRecordResult> callback = new FutureCallback<UserRecordResult>() {
+
 			@Override
-			public void onFailure(Throwable t) {
-				asyncHandler.onError((t instanceof Exception) ? ((Exception) t) : new AwsRequestFailureException(message, putRecordRequest, t));
+			public void onFailure(Throwable ex) {
+				asyncHandler
+						.onError(ex instanceof Exception ?
+								(Exception) ex :
+								new AwsRequestFailureException(message, putRecordRequest, ex));
 			}
 
 			@Override
@@ -202,20 +206,10 @@ public class KplMessageHandler extends AbstractAwsMessageHandler<Void> {
 		};
 		Futures.addCallback(recordResult, callback, MoreExecutors.directExecutor());
 
-		SettableListenableFuture<UserRecordResult> result = new SettableListenableFuture<>();
-		recordResult.addListener(() -> {
-			try {
-				result.set(recordResult.get());
-			}
-			catch (InterruptedException | ExecutionException e) {
-				result.setException(e);
-			}
-		}, MoreExecutors.directExecutor());
-
-		return result;
+		return recordResult;
 	}
 
-	private PutRecordRequest buildPutRecordRequest(Message<?> message) throws Exception {
+	private PutRecordRequest buildPutRecordRequest(Message<?> message) {
 		MessageHeaders messageHeaders = message.getHeaders();
 		String stream = messageHeaders.get(AwsHeaders.STREAM, String.class);
 		if (!StringUtils.hasText(stream) && this.streamExpression != null) {
@@ -260,6 +254,7 @@ public class KplMessageHandler extends AbstractAwsMessageHandler<Void> {
 					payload instanceof byte[]
 							? (byte[]) payload
 							: this.converter.convert(payload);
+			Assert.notNull(bytes, "payload cannot be null");
 			if (this.embeddedHeadersMapper != null) {
 				messageToEmbed = new MutableMessage<>(bytes, messageHeaders);
 			}
@@ -269,7 +264,14 @@ public class KplMessageHandler extends AbstractAwsMessageHandler<Void> {
 		}
 
 		if (messageToEmbed != null) {
-			data = ByteBuffer.wrap(this.embeddedHeadersMapper.fromMessage(messageToEmbed));
+			try {
+				byte[] bytes = this.embeddedHeadersMapper.fromMessage(messageToEmbed);
+				Assert.notNull(bytes, "payload cannot be null");
+				data = ByteBuffer.wrap(bytes);
+			}
+			catch (Exception ex) {
+				throw new MessageConversionException(message, "Cannot embedded headers to payload", ex);
+			}
 		}
 
 		return new PutRecordRequest()
